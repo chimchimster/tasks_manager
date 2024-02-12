@@ -38,7 +38,7 @@ class BaseRetrieveUpdateDestroyAPIView(RetrieveUpdateDestroyAPIView):
         """
         obj = self.get_object()
         serializer = self.serializer_class(obj)
-        return Response(serializer.data)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
     def put(self, request, *args, **kwargs):
         """
