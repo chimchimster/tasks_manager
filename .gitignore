@@ -3,6 +3,8 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+tmanager/tasks_api/migrations/*
+
 # C extensions
 *.so
 
