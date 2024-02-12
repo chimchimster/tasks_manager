@@ -3,17 +3,21 @@ from django.db.models import F
 from django.contrib.auth.models import User
 
 
-class Board(models.Model):
+class CanBeDestroyedMixin(models.Model):
+
+    class Meta:
+        abstract = True
+
+    def can_be_destroyed(self, user):
+        return user.is_staff
+
+
+class Board(CanBeDestroyedMixin):
 
     title = models.CharField(max_length=50, verbose_name='Заголовок борда', blank=False, null=False)
     description = models.TextField(verbose_name='Описание борда', blank=False, null=False)
     created_at = models.DateTimeField(auto_now=True, verbose_name='Время создания борда')
     updated_at = models.DateTimeField(auto_now_add=True, verbose_name='Время изменения борда')
-
-    def can_be_destroyed(self, user):
-        if user.is_staff():
-            return True
-        return False
 
     def __str__(self):
         return self.title
@@ -24,7 +28,7 @@ class Board(models.Model):
         verbose_name_plural = 'Борды'
 
 
-class Status(models.Model):
+class Status(CanBeDestroyedMixin):
 
     STATUSES = (
         ('to_do', 'В ожидании начала исполнения'),
@@ -42,7 +46,7 @@ class Status(models.Model):
         verbose_name_plural = 'Статусы'
 
 
-class Tag(models.Model):
+class Tag(CanBeDestroyedMixin):
 
     TAGS = (
         ('backend', 'Бэкенд'),
@@ -61,7 +65,7 @@ class Tag(models.Model):
         verbose_name_plural = 'Метки'
 
 
-class Priority(models.Model):
+class Priority(CanBeDestroyedMixin):
 
     PRIORITIES = (
         ('urgently', 'Срочно'),
@@ -78,7 +82,7 @@ class Priority(models.Model):
         verbose_name_plural = 'Приоритеты'
 
 
-class Task(models.Model):
+class Task(CanBeDestroyedMixin):
 
     board_id = models.ForeignKey(Board, on_delete=models.CASCADE, related_name='cards', verbose_name='Борд')
     participants = models.ManyToManyField(User, verbose_name='Участники')
@@ -112,7 +116,7 @@ class Task(models.Model):
         ]
 
 
-class TaskHistory(models.Model):
+class TaskHistory(CanBeDestroyedMixin):
 
     task = models.ForeignKey(Task, on_delete=models.CASCADE, related_name='history', verbose_name='Задача')
     user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Пользователь')

@@ -61,6 +61,7 @@ class BaseRetrieveUpdateDestroyAPIView(RetrieveUpdateDestroyAPIView):
         """
         instance = self.get_object()
         user = request.user
+
         if not instance.can_be_destroyed(user):
             return Response({"error": "Only staff can delete boards."}, status=status.HTTP_403_FORBIDDEN)
 
