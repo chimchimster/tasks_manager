@@ -10,6 +10,11 @@ class Board(models.Model):
     created_at = models.DateTimeField(auto_now=True, verbose_name='Время создания борда')
     updated_at = models.DateTimeField(auto_now_add=True, verbose_name='Время изменения борда')
 
+    def can_be_destroyed(self, user):
+        if user.is_staff():
+            return True
+        return False
+
     def __str__(self):
         return self.title
 

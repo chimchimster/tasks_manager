@@ -3,14 +3,17 @@ from datetime import datetime
 from rest_framework.serializers import ModelSerializer
 
 from .models import *
+from .mixins import CommonValidationMixin
 
 
-class BoardSerializer(ModelSerializer):
+class BoardSerializer(ModelSerializer, CommonValidationMixin):
+
     class Meta:
         model = Board
-        fields = ['title', 'description', 'created_at', 'updated_at']
+        fields = '__all__'
 
     def to_representation(self, instance):
+        """ Response representation of model. """
 
         representation = super().to_representation(instance)
 
@@ -25,6 +28,14 @@ class BoardSerializer(ModelSerializer):
         return representation
 
 
+class TaskSerializer(ModelSerializer, CommonValidationMixin):
+
+    class Meta:
+        model = Task
+        fields = '__all__'
+
+
 __all__ = [
     'BoardSerializer',
+    'TaskSerializer',
 ]
