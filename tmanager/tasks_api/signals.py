@@ -23,11 +23,7 @@ def update_task_history(sender, instance, created, **kwargs):
         recipients_emails = set()
         for user in instance.participants.all():
             if user.email:
-                email = EmailMessage(
-                    subject=subject,
-                    body=message,
-                )
-                recipients_emails.add(email)
+                recipients_emails.add(user.email)
 
         if recipients_emails:
-            send_email_notifications.delay(*recipients_emails)
+            send_email_notifications.delay(subject, message, 'example.com', list(recipients_emails))
