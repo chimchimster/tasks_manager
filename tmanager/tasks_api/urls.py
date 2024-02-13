@@ -14,6 +14,7 @@ urlpatterns = [
     # GET, PUT, DELETE methods
     path('board/<int:pk>/', RetrieveUpdateDestroyBoardApiView.as_view(), name='board'),
     path('task/<int:pk>/', RetrieveUpdateDestroyTaskApiView.as_view(), name='task'),
+    path('board/<int:pk>/tasks/', BoardTasksApiView.as_view(), name='board_tasks'),
 
     # POST methods
     path('board/create/', CreateBoardApiView.as_view(), name='create_board'),

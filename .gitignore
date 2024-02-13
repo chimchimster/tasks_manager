@@ -4,6 +4,7 @@ __pycache__/
 *$py.class
 
 tmanager/tasks_api/migrations/*
+tmanager/media/
 
 # C extensions
 *.so

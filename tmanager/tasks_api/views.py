@@ -1,21 +1,18 @@
-import logging
-
-from rest_framework.exceptions import ValidationError
-from rest_framework.generics import CreateAPIView, RetrieveUpdateDestroyAPIView, get_object_or_404
+from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework.generics import ListAPIView, CreateAPIView, RetrieveUpdateDestroyAPIView, get_object_or_404
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework_simplejwt.authentication import JWTAuthentication
 
 from .models import *
+from .pagination import ApiViewPaginator
 from .serializers import *
-
-logger = logging.getLogger('API VIEWS')
+from .signals import update_task_history
 
 
 class BaseRetrieveUpdateDestroyAPIView(RetrieveUpdateDestroyAPIView):
 
-    lookup_field = 'pk'
     serializer_class = None
     model = None
     # permission_classes = [IsAuthenticated]
@@ -102,6 +99,21 @@ class RetrieveUpdateDestroyTaskApiView(BaseRetrieveUpdateDestroyAPIView):
     model = Task
     serializer_class = TaskSerializer
 
+    def put(self, request, *args, **kwargs):
+
+        instance = self.get_object()
+        if instance.participants.filter(id=request.user.id).exists() or request.user.is_staff:
+            serializer = self.serializer_class(instance, data=request.data)
+            serializer.is_valid(raise_exception=True)
+            serializer.save()
+            update_task_history(self.model, instance, False, user=request.user)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        else:
+            return Response(
+                {'error': 'Only participants or staff can change task status.'},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
 
 class CreateBoardApiView(BaseCreateApiView):
     model = Board
@@ -113,8 +125,50 @@ class CreateTaskApiView(BaseCreateApiView):
     serializer_class = TaskSerializer
 
 
+class BoardTasksApiView(ListAPIView):
+
+    model = Board
+    serializer_class = TaskSerializer
+    pagination_class = ApiViewPaginator
+    filter_backends = [DjangoFilterBackend]
+    filterset_fields = ['status', 'priority']
+
+    def get_queryset(self):
+        return Task.objects.all()
+
+    def get_object(self):
+        queryset = Board.objects.all()
+        pk = self.kwargs.get(self.lookup_field)
+        obj = get_object_or_404(queryset, pk=pk)
+        return obj
+
+    def get(self, request, *args, **kwargs):
+
+        instance = self.get_object()
+        queryset = instance.tasks.all()
+        filtered_queryset = self.filter_queryset(queryset)
+
+        start = self.request.query_params.get('start')
+        end = self.request.query_params.get('end')
+
+        if start:
+            filtered_queryset = filtered_queryset.filter(created_at__gte=start)
+        if end:
+            filtered_queryset = filtered_queryset.filter(created_at__lte=end)
+
+        page = self.paginate_queryset(filtered_queryset)
+
+        if page is not None:
+            serializer = self.serializer_class(page, many=True)
+            return self.get_paginated_response(serializer.data)
+
+        serializer = self.serializer_class(filtered_queryset, many=True)
+        return Response(serializer.data)
+
+
 __all__ = [
     'RetrieveUpdateDestroyBoardApiView',
     'CreateBoardApiView',
     'RetrieveUpdateDestroyTaskApiView',
+    'BoardTasksApiView',
 ]

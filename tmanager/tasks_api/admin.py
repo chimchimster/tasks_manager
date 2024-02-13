@@ -24,7 +24,7 @@ class AdminBoard(admin.ModelAdmin):
 @admin.register(TaskHistory)
 class AdminTaskHistory(admin.ModelAdmin):
 
-    list_display = ['task', 'user', 'timestamp', 'description']
+    list_display = ['task', 'user', 'timestamp', 'previous_status', 'current_status']
 
 
 admin.site.register(Status)
