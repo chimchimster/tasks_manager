@@ -2,6 +2,8 @@ import os
 
 from pathlib import Path
 
+from celery.schedules import crontab
+
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
 SECRET_KEY = os.environ.get('SECRET_KEY')
@@ -22,6 +24,8 @@ INSTALLED_APPS = [
     'tasks_api.apps.TasksApiConfig',
     'rest_framework',
     'django_filters',
+    'django_celery_beat',
+    'drf_yasg',
 ]
 
 MIDDLEWARE = [
@@ -75,7 +79,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'Asia/Almaty'
 
 USE_I18N = True
 
@@ -95,4 +99,29 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # CELERY conf
 
-CELERY_BROKER_URL = os.getenv('CELERY_BROKER_URL')
+CELERY_BROKER_URL = os.getenv('CELERY_BROKER_URL', "redis://127.0.0.1:6379/0")
+
+# CELERY beat conf
+
+CELERY_BEAT_SCHEDULE = {
+    'send_daily_project_notification': {
+        'task': 'send_daily_project_notification',
+        'schedule': crontab(hour='9', minute='15'),
+    },
+}
+
+# LOGGING conf
+
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+        },
+    },
+    "root": {
+        "handlers": ["console"],
+        "level": "WARNING",
+    },
+}

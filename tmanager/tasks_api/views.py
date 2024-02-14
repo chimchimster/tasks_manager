@@ -1,6 +1,7 @@
+from django.contrib.auth.models import User
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.generics import ListAPIView, CreateAPIView, RetrieveUpdateDestroyAPIView, get_object_or_404
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework_simplejwt.authentication import JWTAuthentication
@@ -15,8 +16,8 @@ class BaseRetrieveUpdateDestroyAPIView(RetrieveUpdateDestroyAPIView):
 
     serializer_class = None
     model = None
-    # permission_classes = [IsAuthenticated]
-    # authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
+    authentication_classes = [JWTAuthentication]
 
     def get_queryset(self):
         return self.model.objects.all()
@@ -45,7 +46,7 @@ class BaseRetrieveUpdateDestroyAPIView(RetrieveUpdateDestroyAPIView):
             :raises ValidationError: if object has validation errors.
         """
         instance = self.get_object()
-        serializer = self.serializer_class(instance, data=request.data)
+        serializer = self.serializer_class(instance, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response(serializer.data, status=status.HTTP_200_OK)
@@ -70,8 +71,6 @@ class BaseCreateApiView(CreateAPIView):
 
     model = None
     serializer_class = None
-    # permission_classes = [IsAuthenticated]
-    # authentication_classes = [JWTAuthentication]
 
     def post(self, request, **kwargs):
         """
@@ -100,10 +99,15 @@ class RetrieveUpdateDestroyTaskApiView(BaseRetrieveUpdateDestroyAPIView):
     serializer_class = TaskSerializer
 
     def put(self, request, *args, **kwargs):
-
+        """
+        Updates task by Its unique identifier.
+            :param request: HTTP PUT request.
+            :returns Response: REST API response.
+            :raises Validation or Permission error.
+        """
         instance = self.get_object()
         if instance.participants.filter(id=request.user.id).exists() or request.user.is_staff:
-            serializer = self.serializer_class(instance, data=request.data)
+            serializer = self.serializer_class(instance, data=request.data, partial=True)
             serializer.is_valid(raise_exception=True)
             serializer.save()
             update_task_history(self.model, instance, False, user=request.user)
@@ -118,11 +122,15 @@ class RetrieveUpdateDestroyTaskApiView(BaseRetrieveUpdateDestroyAPIView):
 class CreateBoardApiView(BaseCreateApiView):
     model = Board
     serializer_class = BoardSerializer
+    permission_classes = [IsAuthenticated]
+    authentication_classes = [JWTAuthentication]
 
 
 class CreateTaskApiView(BaseCreateApiView):
     model = Task
     serializer_class = TaskSerializer
+    permission_classes = [IsAuthenticated]
+    authentication_classes = [JWTAuthentication]
 
 
 class BoardTasksApiView(ListAPIView):
@@ -130,6 +138,8 @@ class BoardTasksApiView(ListAPIView):
     model = Board
     serializer_class = TaskSerializer
     pagination_class = ApiViewPaginator
+    permission_classes = [IsAuthenticated]
+    authentication_classes = [JWTAuthentication]
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ['status', 'priority']
 
@@ -143,6 +153,11 @@ class BoardTasksApiView(ListAPIView):
         return obj
 
     def get(self, request, *args, **kwargs):
+        """
+        Retrieves all task connected with specified board.
+            :param request: HTTP POST request.
+            :returns Response: REST API response.
+        """
 
         instance = self.get_object()
         queryset = instance.tasks.all()
@@ -166,9 +181,25 @@ class BoardTasksApiView(ListAPIView):
         return Response(serializer.data)
 
 
+class UserRegistrationApiView(CreateAPIView):
+
+    permission_classes = [AllowAny]
+    serializer_class = UserSerializer
+    queryset = User.objects.all()
+
+    def post(self, request, *args, **kwargs):
+        serializer = self.serializer_class(data=request.data)
+        if serializer.is_valid():
+            self.perform_create(serializer)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
 __all__ = [
     'RetrieveUpdateDestroyBoardApiView',
     'CreateBoardApiView',
+    'CreateTaskApiView',
     'RetrieveUpdateDestroyTaskApiView',
     'BoardTasksApiView',
+    'UserRegistrationApiView',
 ]

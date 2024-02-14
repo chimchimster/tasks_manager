@@ -1,10 +1,7 @@
-from datetime import datetime
-
 from django.contrib.auth.models import User
 from rest_framework.exceptions import ValidationError
-from rest_framework.generics import get_object_or_404
 from rest_framework.relations import SlugRelatedField
-from rest_framework.serializers import Serializer, ModelSerializer, StringRelatedField, ListSerializer
+from rest_framework.serializers import ModelSerializer, StringRelatedField, PrimaryKeyRelatedField, ManyRelatedField, CharField
 
 from .models import *
 from .mixins import CommonValidationMixin
@@ -20,6 +17,18 @@ class TagSerializer(ModelSerializer):
     class Meta:
         model = Tag
         fields = ['tag']
+
+
+class ManyRelatedTagField(ManyRelatedField):
+    def to_representation(self, value):
+        return TagSerializer(value, many=True).data
+
+    def to_internal_value(self, data):
+        tags = []
+        for tag_data in data:
+            tag, created = Tag.objects.get_or_create(**tag_data)
+            tags.append(tag)
+        return tags
 
 
 class PrioritySerializer(ModelSerializer):
@@ -40,27 +49,26 @@ class BoardSerializer(ModelSerializer, CommonValidationMixin):
         model = Board
         fields = ['title', 'description', 'created_at', 'updated_at']
 
-    def to_representation(self, instance):
 
-        representation = super().to_representation(instance)
+class UserSerializer(ModelSerializer):
 
-        created_at, updated_at = representation.get('created_at'), representation.get('updated_at')
+    password = CharField(write_only=True)
 
-        created_at = datetime.strptime(created_at, '%Y-%m-%dT%H:%M:%S.%fZ')
-        updated_at = datetime.strptime(updated_at, '%Y-%m-%dT%H:%M:%S.%fZ')
+    class Meta:
+        model = User
+        fields = ['username', 'password', 'email']
 
-        representation['created_at'] = created_at.strftime('%d-%m-%Y %H:%M:%S')
-        representation['updated_at'] = updated_at.strftime('%d-%m-%Y %H:%M:%S')
-
-        return representation
+    def create(self, validated_data):
+        user = User.objects.create_user(**validated_data)
+        return user
 
 
 class TaskSerializer(ModelSerializer, CommonValidationMixin):
 
     status = SlugRelatedField(slug_field='status', queryset=Status.objects.all())
-    tags = StringRelatedField(many=True, read_only=True)
-    priority = StringRelatedField(read_only=True)
+    priority = PrimaryKeyRelatedField(queryset=Priority.objects.all())
     participants = StringRelatedField(many=True, read_only=True)
+    tags = StringRelatedField(many=True, read_only=True)
 
     class Meta:
         model = Task
@@ -69,6 +77,10 @@ class TaskSerializer(ModelSerializer, CommonValidationMixin):
     def validate_status(self, value):
 
         instance = self.instance
+
+        if not instance:
+            return value
+
         current_status = instance.status.status
 
         allowed_transitions = {
@@ -86,4 +98,5 @@ class TaskSerializer(ModelSerializer, CommonValidationMixin):
 __all__ = [
     'BoardSerializer',
     'TaskSerializer',
+    'UserSerializer',
 ]

@@ -1,0 +1,4 @@
+.idea
+.venv
+tmanager/celerybeat-schedule
+tmanager/db.sqlite3

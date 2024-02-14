@@ -1,0 +1,51 @@
+version: '3'
+
+services:
+
+  redis:
+    container_name: redis_container
+    image: redis
+    ports:
+      - "8111:6379"
+    networks:
+      - common_t_manager
+
+  postgres:
+    container_name: postgres_container
+    image: postgres:15
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      PGDATA: /data/postgres
+    volumes:
+       - postgres:/data/postgres
+    ports:
+      - "8110:5432"
+    networks:
+      - common_t_manager
+    restart: unless-stopped
+
+  t_manager:
+    container_name: t_manager_container
+    build:
+      context: .
+      dockerfile: "./Dockerfile"
+    networks:
+      - common_t_manager
+    ports:
+      - "8211:8000"
+    depends_on:
+      - postgres
+      - redis
+    env_file:
+      - tmanager/.env
+    environment:
+      - DJANGO_SETTINGS_MODULE=tmanager.settings.prod
+
+
+networks:
+  common_t_manager:
+    driver: bridge
+
+volumes:
+    postgres:
