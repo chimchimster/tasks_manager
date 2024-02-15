@@ -85,8 +85,8 @@ class BaseCreateApiView(CreateAPIView):
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
-        else:
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class RetrieveUpdateDestroyBoardApiView(BaseRetrieveUpdateDestroyAPIView):
@@ -112,11 +112,11 @@ class RetrieveUpdateDestroyTaskApiView(BaseRetrieveUpdateDestroyAPIView):
             serializer.save()
             update_task_history(self.model, instance, False, user=request.user)
             return Response(serializer.data, status=status.HTTP_200_OK)
-        else:
-            return Response(
-                {'error': 'Only participants or staff can change task status.'},
-                status=status.HTTP_403_FORBIDDEN,
-            )
+
+        return Response(
+            {'error': 'Only participants or staff can change task status.'},
+            status=status.HTTP_403_FORBIDDEN,
+        )
 
 
 class CreateBoardApiView(BaseCreateApiView):
